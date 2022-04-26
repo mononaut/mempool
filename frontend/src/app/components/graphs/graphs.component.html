@@ -1,4 +1,4 @@
-<div class="mb-3 d-flex menu" style="padding: 0px 35px;">
+<div class="mb-3 d-flex menu" style="margin-left: 35px;">
   <a routerLinkActive="active" class="btn btn-primary w-50 mr-1"
     [routerLink]="['/graphs/mempool' | relativeUrl]">Mempool</a>
   <div ngbDropdown *ngIf="stateService.env.MINING_DASHBOARD" class="w-50">
@@ -34,6 +34,7 @@
       </a>
     </div>
   </div>
+  <button class="btn btn-primary btn-sm ml-1" [routerLink]="['/tv' | relativeUrl]"><fa-icon [icon]="['fas', 'tv']" [fixedWidth]="true" i18n-title="master-page.tvview" title="TV view"></fa-icon></button>
 </div>
 
 <router-outlet></router-outlet>

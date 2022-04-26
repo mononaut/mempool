@@ -65,7 +65,6 @@ import { MiningDashboardComponent } from './components/mining-dashboard/mining-d
 import { HashrateChartComponent } from './components/hashrate-chart/hashrate-chart.component';
 import { HashrateChartPoolsComponent } from './components/hashrates-chart-pools/hashrate-chart-pools.component';
 import { MiningStartComponent } from './components/mining-start/mining-start.component';
-import { AmountShortenerPipe } from './shared/pipes/amount-shortener.pipe';
 import { ShortenStringPipe } from './shared/pipes/shorten-string-pipe/shorten-string.pipe';
 import { GraphsComponent } from './components/graphs/graphs.component';
 import { DifficultyAdjustmentsTable } from './components/difficulty-adjustments-table/difficulty-adjustments-table.components';
@@ -124,7 +123,6 @@ import { BlockSizesWeightsGraphComponent } from './components/block-sizes-weight
     HashrateChartComponent,
     HashrateChartPoolsComponent,
     MiningStartComponent,
-    AmountShortenerPipe,
     GraphsComponent,
     DifficultyAdjustmentsTable,
     BlocksList,

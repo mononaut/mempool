@@ -29,6 +29,8 @@ import { MempoolBlocksComponent } from '../components/mempool-blocks/mempool-blo
 import { BlockchainBlocksComponent } from '../components/blockchain-blocks/blockchain-blocks.component';
 import { AmountComponent } from '../components/amount/amount.component';
 import { RouterModule } from '@angular/router';
+import { ChangeComponent } from '../components/change/change.component';
+import { AmountShortenerPipe } from '../shared/pipes/amount-shortener.pipe';
 
 @NgModule({
   declarations: [
@@ -58,6 +60,8 @@ import { RouterModule } from '@angular/router';
     MempoolBlocksComponent,
     BlockchainBlocksComponent,
     AmountComponent,
+    ChangeComponent,
+    AmountShortenerPipe,
   ],
   imports: [
     CommonModule,
@@ -74,6 +78,7 @@ import { RouterModule } from '@angular/router';
     VbytesPipe,
     RelativeUrlPipe,
     NoSanitizePipe,
+    AmountShortenerPipe,
   ],
   exports: [
     RouterModule,
@@ -111,6 +116,8 @@ import { RouterModule } from '@angular/router';
     MempoolBlocksComponent,
     BlockchainBlocksComponent,
     AmountComponent,
+    ChangeComponent,
+    AmountShortenerPipe,
   ]
 })
 export class SharedModule {}
