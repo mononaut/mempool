@@ -1,5 +1,8 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FaIconLibrary, FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faFilter, faAngleDown, faAngleUp, faAngleRight, faAngleLeft, faBolt, faChartArea, faCogs, faCubes, faHammer, faDatabase, faExchangeAlt, faInfoCircle,
+  faLink, faList, faSearch, faCaretUp, faCaretDown, faTachometerAlt, faThList, faTint, faTv, faAngleDoubleDown, faSortUp, faAngleDoubleUp, faChevronDown, faFileAlt, faRedoAlt, faArrowAltCircleRight, faExternalLinkAlt, faBook, faListUl, faQrcode, faDownload } from '@fortawesome/free-solid-svg-icons';
 import { VbytesPipe } from './pipes/bytes-pipe/vbytes.pipe';
 import { ShortenStringPipe } from './pipes/shorten-string-pipe/shorten-string.pipe';
 import { CeilPipe } from './pipes/math-ceil/math-ceil.pipe';
@@ -75,6 +78,7 @@ import { SatsComponent } from './components/sats/sats.component';
     NgbPaginationModule,
     NgbDropdownModule,
     NgbAccordionModule,
+    FontAwesomeModule,
   ],
   providers: [
     VbytesPipe,
@@ -121,6 +125,45 @@ import { SatsComponent } from './components/sats/sats.component';
     ChangeComponent,
     AmountShortenerPipe,
     SatsComponent,
+    FontAwesomeModule,
   ]
 })
-export class SharedModule {}
+export class SharedModule {
+  constructor(library: FaIconLibrary) {
+    library.addIcons(faInfoCircle);
+    library.addIcons(faChartArea);
+    library.addIcons(faTv);
+    library.addIcons(faTachometerAlt);
+    library.addIcons(faCubes);
+    library.addIcons(faHammer);
+    library.addIcons(faCogs);
+    library.addIcons(faThList);
+    library.addIcons(faList);
+    library.addIcons(faTachometerAlt);
+    library.addIcons(faDatabase);
+    library.addIcons(faSearch);
+    library.addIcons(faLink);
+    library.addIcons(faBolt);
+    library.addIcons(faTint);
+    library.addIcons(faFilter);
+    library.addIcons(faAngleDown);
+    library.addIcons(faAngleUp);
+    library.addIcons(faExchangeAlt);
+    library.addIcons(faAngleDoubleUp);
+    library.addIcons(faAngleDoubleDown);
+    library.addIcons(faChevronDown);
+    library.addIcons(faFileAlt);
+    library.addIcons(faRedoAlt);
+    library.addIcons(faArrowAltCircleRight);
+    library.addIcons(faExternalLinkAlt);
+    library.addIcons(faSortUp);
+    library.addIcons(faCaretUp);
+    library.addIcons(faCaretDown);
+    library.addIcons(faAngleRight);
+    library.addIcons(faAngleLeft);
+    library.addIcons(faBook);
+    library.addIcons(faListUl);
+    library.addIcons(faDownload);
+    library.addIcons(faQrcode);
+  }
+}

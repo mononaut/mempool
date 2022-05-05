@@ -45,10 +45,6 @@ import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 import { FeesBoxComponent } from './components/fees-box/fees-box.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { DifficultyComponent } from './components/difficulty/difficulty.component';
-import { FontAwesomeModule, FaIconLibrary } from '@fortawesome/angular-fontawesome';
-import { faFilter, faAngleDown, faAngleUp, faAngleRight, faAngleLeft, faBolt, faChartArea, faCogs, faCubes, faHammer, faDatabase, faExchangeAlt, faInfoCircle,
-  faLink, faList, faSearch, faCaretUp, faCaretDown, faTachometerAlt, faThList, faTint, faTv, faAngleDoubleDown, faSortUp, faAngleDoubleUp, faChevronDown,
-  faFileAlt, faRedoAlt, faArrowAltCircleRight, faExternalLinkAlt, faBook, faListUl, faDownload } from '@fortawesome/free-solid-svg-icons';
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { TrademarkPolicyComponent } from './components/trademark-policy/trademark-policy.component';
@@ -144,7 +140,6 @@ import { BlockSizesWeightsGraphComponent } from './components/block-sizes-weight
     InfiniteScrollModule,
     NgbTypeaheadModule,
     NgbModule,
-    FontAwesomeModule,
     SharedModule,
     NgxEchartsModule.forRoot({
       echarts: () => import('echarts')
@@ -163,41 +158,4 @@ import { BlockSizesWeightsGraphComponent } from './components/block-sizes-weight
   ],
   bootstrap: [AppComponent]
 })
-export class AppModule {
-  constructor(library: FaIconLibrary) {
-    library.addIcons(faInfoCircle);
-    library.addIcons(faChartArea);
-    library.addIcons(faTv);
-    library.addIcons(faTachometerAlt);
-    library.addIcons(faCubes);
-    library.addIcons(faHammer);
-    library.addIcons(faCogs);
-    library.addIcons(faThList);
-    library.addIcons(faList);
-    library.addIcons(faTachometerAlt);
-    library.addIcons(faDatabase);
-    library.addIcons(faSearch);
-    library.addIcons(faLink);
-    library.addIcons(faBolt);
-    library.addIcons(faTint);
-    library.addIcons(faFilter);
-    library.addIcons(faAngleDown);
-    library.addIcons(faAngleUp);
-    library.addIcons(faExchangeAlt);
-    library.addIcons(faAngleDoubleUp);
-    library.addIcons(faAngleDoubleDown);
-    library.addIcons(faChevronDown);
-    library.addIcons(faFileAlt);
-    library.addIcons(faRedoAlt);
-    library.addIcons(faArrowAltCircleRight);
-    library.addIcons(faExternalLinkAlt);
-    library.addIcons(faSortUp);
-    library.addIcons(faCaretUp);
-    library.addIcons(faCaretDown);
-    library.addIcons(faAngleRight);
-    library.addIcons(faAngleLeft);
-    library.addIcons(faBook);
-    library.addIcons(faListUl);
-    library.addIcons(faDownload);
-  }
-}
+export class AppModule { }
