@@ -159,7 +159,7 @@
                     <span class="d-none d-lg-block">{{ vout.scriptpubkey_address | shortenString : 35 }}</span>
                   </a>
                   <div>
-                    <app-address-labels [vout]="vout"></app-address-labels>
+                    <app-address-labels [vout]="vout" [channel]="channels && channels[i] && channels[i].transaction_vout === vindex ? channels[i] : null"></app-address-labels>
                   </div>
                   <ng-template #scriptpubkey_type>
                     <ng-template [ngIf]="vout.pegout" [ngIfElse]="defaultscriptpubkey_type">

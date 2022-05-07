@@ -7,6 +7,7 @@ import { environment } from 'src/environments/environment';
 import { AssetsService } from 'src/app/services/assets.service';
 import { map, switchMap } from 'rxjs/operators';
 import { BlockExtended } from 'src/app/interfaces/node-api.interface';
+import { ApiService } from 'src/app/services/api.service';
 
 @Component({
   selector: 'app-transactions-list',
@@ -30,13 +31,16 @@ export class TransactionsListComponent implements OnInit, OnChanges {
   latestBlock$: Observable<BlockExtended>;
   outspendsSubscription: Subscription;
   refreshOutspends$: ReplaySubject<object> = new ReplaySubject();
+  refreshChannels$: ReplaySubject<string[]> = new ReplaySubject();
   showDetails$ = new BehaviorSubject<boolean>(false);
   outspends: Outspend[][] = [];
   assetsMinimal: any;
+  channels: any[];
 
   constructor(
     public stateService: StateService,
     private electrsApiService: ElectrsApiService,
+    private apiService: ApiService,
     private assetsService: AssetsService,
     private ref: ChangeDetectorRef,
   ) { }
@@ -76,7 +80,15 @@ export class TransactionsListComponent implements OnInit, OnChanges {
               };
             }
           }),
-        )
+        ),
+        this.refreshChannels$
+          .pipe(
+            switchMap((txIds) => this.apiService.getChannelByTxIds$(txIds)),
+            map((channels) => {
+              this.channels = channels;
+            }),
+          )
+        ,
     ).subscribe(() => this.ref.markForCheck());
   }
 
@@ -117,6 +129,7 @@ export class TransactionsListComponent implements OnInit, OnChanges {
       observableObject[i] = this.electrsApiService.getOutspends$(tx.txid);
     });
     this.refreshOutspends$.next(observableObject);
+    this.refreshChannels$.next(this.transactions.map((tx) => tx.txid));
   }
 
   onScroll() {
