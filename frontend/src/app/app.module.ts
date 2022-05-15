@@ -41,7 +41,6 @@ import { AssetsComponent } from './components/assets/assets.component';
 import { AssetsNavComponent } from './components/assets/assets-nav/assets-nav.component';
 import { StatusViewComponent } from './components/status-view/status-view.component';
 import { SharedModule } from './shared/shared.module';
-import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 import { FeesBoxComponent } from './components/fees-box/fees-box.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { DifficultyComponent } from './components/difficulty/difficulty.component';
@@ -73,6 +72,7 @@ import { BlockFeeRatesGraphComponent } from './components/block-fee-rates-graph/
 import { LoadingIndicatorComponent } from './components/loading-indicator/loading-indicator.component';
 import { IndexingProgressComponent } from './components/indexing-progress/indexing-progress.component';
 import { BlockSizesWeightsGraphComponent } from './components/block-sizes-weights-graph/block-sizes-weights-graph.component';
+import { SearchResultsComponent } from './components/search-form/search-results/search-results.component';
 
 @NgModule({
   declarations: [
@@ -129,7 +129,8 @@ import { BlockSizesWeightsGraphComponent } from './components/block-sizes-weight
     BlockFeeRatesGraphComponent,
     LoadingIndicatorComponent,
     IndexingProgressComponent,
-    BlockSizesWeightsGraphComponent
+    BlockSizesWeightsGraphComponent,
+    SearchResultsComponent
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'serverApp' }),
@@ -138,7 +139,6 @@ import { BlockSizesWeightsGraphComponent } from './components/block-sizes-weight
     HttpClientModule,
     BrowserAnimationsModule,
     InfiniteScrollModule,
-    NgbTypeaheadModule,
     NgbModule,
     SharedModule,
     NgxEchartsModule.forRoot({
