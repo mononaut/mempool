@@ -45,6 +45,7 @@ import { StartComponent } from '../components/start/start.component';
 import { TransactionComponent } from '../components/transaction/transaction.component';
 import { TransactionsListComponent } from '../components/transactions-list/transactions-list.component';
 import { BlockComponent } from '../components/block/block.component';
+import { BlockAuditComponent } from '../components/block-audit/block-audit.component';
 import { BlockOverviewGraphComponent } from '../components/block-overview-graph/block-overview-graph.component';
 import { BlockOverviewTooltipComponent } from '../components/block-overview-tooltip/block-overview-tooltip.component';
 import { AddressComponent } from '../components/address/address.component';
@@ -112,6 +113,7 @@ import { SvgImagesComponent } from '../components/svg-images/svg-images.componen
     StartComponent,
     TransactionComponent,
     BlockComponent,
+    BlockAuditComponent,
     BlockOverviewGraphComponent,
     BlockOverviewTooltipComponent,
     TransactionsListComponent,
@@ -207,6 +209,7 @@ import { SvgImagesComponent } from '../components/svg-images/svg-images.componen
     StartComponent,
     TransactionComponent,
     BlockComponent,
+    BlockAuditComponent,
     BlockOverviewGraphComponent,
     BlockOverviewTooltipComponent,
     TransactionsListComponent,
