@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, ViewChildren,QueryList } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, ViewChildren,QueryList } from '@angular/core';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map, share, switchMap, tap } from 'rxjs/operators';
@@ -22,7 +22,7 @@ import { BlockOverviewGraphComponent } from '../block-overview-graph/block-overv
     }
   `],
 })
-export class BlockAuditComponent implements OnInit, OnDestroy {
+export class BlockAuditComponent implements OnInit, AfterViewInit, OnDestroy {
   blockAudit: BlockAudit = undefined;
   transactions: string[];
   auditObservable$: Observable<BlockAudit>;
@@ -31,7 +31,7 @@ export class BlockAuditComponent implements OnInit, OnDestroy {
   page = 1;
   itemsPerPage: number;
 
-  mode: 'missing' | 'added' = 'missing';
+  mode: 'template' | 'mined' = 'mined';
   isLoading = true;
   webGlEnabled = true;
   isMobile = window.innerWidth <= 767.98;
@@ -88,6 +88,7 @@ export class BlockAuditComponent implements OnInit, OnDestroy {
               return blockAudit;
             }),
             tap((blockAudit) => {
+              this.blockAudit = blockAudit;
               this.changeMode(this.mode);
               // if (this.blockGraphTemplate) {
               //   this.blockGraphTemplate.destroy();
@@ -99,10 +100,12 @@ export class BlockAuditComponent implements OnInit, OnDestroy {
               // }
               this.blockGraphsTemplate.forEach(graph => {
                 graph.destroy();
+                graph.initCanvas();
                 graph.setup(blockAudit.template);
               })
               this.blockGraphsMined.forEach(graph => {
                 graph.destroy();
+                graph.initCanvas();
                 graph.setup(blockAudit.transactions);
               })
               this.isLoading = false;
@@ -113,12 +116,35 @@ export class BlockAuditComponent implements OnInit, OnDestroy {
     );
   }
 
+  ngAfterViewInit() {
+    this.blockGraphsTemplate.changes.subscribe(
+      (graphs: QueryList<BlockOverviewGraphComponent>) => {
+        if (this.blockAudit) {
+          graphs.forEach(graph => {
+            graph.destroy();
+            graph.setup(this.blockAudit.template);
+          })
+        }
+      }
+    );
+    this.blockGraphsMined.changes.subscribe(
+      (graphs: QueryList<BlockOverviewGraphComponent>) => {
+        if (this.blockAudit) {
+          graphs.forEach(graph => {
+            graph.destroy();
+            graph.setup(this.blockAudit.transactions);
+          })
+        }
+      }
+    );
+  }
+
   onResize(event: any) {
     this.isMobile = event.target.innerWidth <= 767.98;
     this.paginationMaxSize = event.target.innerWidth < 670 ? 3 : 5;
   }
 
-  changeMode(mode: 'missing' | 'added') {
+  changeMode(mode: 'template' | 'mined') {
     this.router.navigate([], { fragment: mode });
     this.mode = mode;
   }

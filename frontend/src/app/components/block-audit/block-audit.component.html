@@ -81,9 +81,9 @@
     <!-- ADDED vs MISSING button -->
     <div class="d-flex justify-content-center menu mt-3" *ngIf="isMobile">
       <a routerLinkActive="active" class="btn btn-primary w-50 mr-1 ml-1 menu-button" i18n="block.missing-txs"
-        fragment="missing" (click)="changeMode('missing')">Missing</a>
+        fragment="missing" (click)="changeMode('template')">Template</a>
       <a routerLinkActive="active" class="btn btn-primary w-50 mr-1 ml-1 menu-button" i18n="block.added-txs"
-        fragment="added" (click)="changeMode('added')">Added</a>
+        fragment="added" (click)="changeMode('mined')">Block</a>
     </div>
   </div>
 
@@ -92,14 +92,14 @@
     <h3>{{ demo }}</h3>
     <div class="row">
       <!-- MISSING TX RENDERING -->
-      <div class="col-sm" *ngIf="webGlEnabled">
+      <div class="col-sm" *ngIf="webGlEnabled && (!isMobile || mode === 'template')">
         <app-block-overview-graph #blockGraphTemplate [isLoading]="isLoading" [resolution]="75"
           [blockLimit]="stateService.blockVSize" [orientation]="'top'" [flip]="false"
           (txClickEvent)="onTxClick($event)" [demo]="demo"></app-block-overview-graph>
       </div>
 
       <!-- ADDED TX RENDERING -->
-      <div class="col-sm" *ngIf="webGlEnabled && !isMobile">
+      <div class="col-sm" *ngIf="webGlEnabled && (!isMobile || mode === 'mined')">
         <app-block-overview-graph #blockGraphMined [isLoading]="isLoading" [resolution]="75"
           [blockLimit]="stateService.blockVSize" [orientation]="'top'" [flip]="false"
           (txClickEvent)="onTxClick($event)" [demo]="demo"></app-block-overview-graph>
