@@ -5,19 +5,6 @@ import { SpriteUpdateParams, Square, Color, ViewUpdateParams } from './sprite-ty
 import { feeLevels, mempoolFeeColors } from 'src/app/app.constants';
 
 const hoverTransitionTime = 300;
-const defaultHoverColor = hexToColor('1bd8f4');
-
-// convert from this class's update format to TxSprite's update format
-function toSpriteUpdate(params: ViewUpdateParams): SpriteUpdateParams {
-  return {
-    start: (params.start || performance.now()) + (params.delay || 0),
-    duration: params.duration,
-    minDuration: params.minDuration,
-    ...params.display.position,
-    ...params.display.color,
-    adjust: params.adjust
-  };
-}
 
 export default class TxView implements TransactionStripped {
   txid: string;
@@ -32,13 +19,15 @@ export default class TxView implements TransactionStripped {
   hover: boolean;
   sprite: TxSprite;
   hoverColor: Color | void;
+  defaultHoverColor: Color = TxView.hexToColor('1bd8f4');
 
   screenPosition: Square;
   gridPosition: Square | void;
 
   dirty: boolean;
+  demoMode: string;
 
-  constructor(tx: TransactionStripped, vertexArray: FastVertexArray) {
+  constructor(tx: TransactionStripped, vertexArray: FastVertexArray, demoMode: string) {
     this.txid = tx.txid;
     this.fee = tx.fee;
     this.vsize = tx.vsize;
@@ -47,6 +36,7 @@ export default class TxView implements TransactionStripped {
     this.status = tx.status;
     this.initialised = false;
     this.vertexArray = vertexArray;
+    this.demoMode = demoMode;
 
     this.hover = false;
 
@@ -95,7 +85,7 @@ export default class TxView implements TransactionStripped {
     if (!this.initialised || !this.sprite) {
       this.initialised = true;
       this.sprite = new TxSprite(
-        toSpriteUpdate(params),
+        this.toSpriteUpdate(params),
         this.vertexArray
       );
       // apply any pending hover event
@@ -105,12 +95,14 @@ export default class TxView implements TransactionStripped {
           ...this.hoverColor,
           duration: hoverTransitionTime,
           adjust: false,
-          temp: true
+          temp: true,
+          altColor: this.getAltColor(),
+          effect: this.getEffect(),
         });
       }
     } else {
       this.sprite.update(
-        toSpriteUpdate(params)
+        this.toSpriteUpdate(params)
       );
     }
     this.dirty = false;
@@ -119,16 +111,18 @@ export default class TxView implements TransactionStripped {
 
   // Temporarily override the tx color
   // returns minimum transition end time
-  setHover(hoverOn: boolean, color: Color | void = defaultHoverColor): number {
+  setHover(hoverOn: boolean, color: Color | void): number {
     if (hoverOn) {
       this.hover = true;
-      this.hoverColor = color;
+      this.hoverColor = color || this.defaultHoverColor;
 
       this.sprite.update({
         ...this.hoverColor,
         duration: hoverTransitionTime,
         adjust: false,
-        temp: true
+        temp: true,
+        altColor: this.getAltColor(),
+        effect: this.getEffect(),
       });
     } else {
       this.hover = false;
@@ -141,27 +135,59 @@ export default class TxView implements TransactionStripped {
     return performance.now() + hoverTransitionTime;
   }
 
+  static getFeeRateColor(feerate): string {
+    const feeLevelIndex = feeLevels.findIndex((feeLvl) => Math.max(1, feerate) < feeLvl) - 1;
+    return mempoolFeeColors[feeLevelIndex] || mempoolFeeColors[mempoolFeeColors.length - 1];
+  }
+
   getColor(): Color {
     // Block audit
-    if (this.status === 'found') {
-      // return hexToColor('1a4987');
-    } else if (this.status === 'missing') {
-      return hexToColor('039BE5');
-    } else if (this.status === 'added') {
-      return hexToColor('D81B60');
-    }
+    // if (this.status === 'found') {
+    //   // return hexToColor('1a4987');
+    // } else if (this.status === 'missing') {
+    //   return hexToColor('039BE5');
+    // } else if (this.status === 'added') {
+    //   return hexToColor('D81B60');
+    // }
 
     // Block component
-    const feeLevelIndex = feeLevels.findIndex((feeLvl) => Math.max(1, this.feerate) < feeLvl) - 1;
-    return hexToColor(mempoolFeeColors[feeLevelIndex] || mempoolFeeColors[mempoolFeeColors.length - 1]);
+    return TxView.hexToColor(TxView.getFeeRateColor(this.feerate));
   }
-}
 
-function hexToColor(hex: string): Color {
-  return {
-    r: parseInt(hex.slice(0, 2), 16) / 255,
-    g: parseInt(hex.slice(2, 4), 16) / 255,
-    b: parseInt(hex.slice(4, 6), 16) / 255,
-    a: 1
-  };
+  getAltColor(): Color {
+    return TxView.hexToColor('FFFFFF');
+  }
+
+  getEffect(): string {
+    if (this.status === 'added') {
+      return this.demoMode;
+    } else if (this.status === 'missing') {
+      return this.demoMode;
+    } else {
+      return null;
+    }
+  }
+
+  // convert from this class's update format to TxSprite's update format
+  toSpriteUpdate(params: ViewUpdateParams): SpriteUpdateParams {
+    return {
+      start: (params.start || performance.now()) + (params.delay || 0),
+      duration: params.duration,
+      minDuration: params.minDuration,
+      ...params.display.position,
+      ...params.display.color,
+      adjust: params.adjust,
+      altColor: this.getAltColor(),
+      effect: this.getEffect(),
+    };
+  }
+
+  static hexToColor(hex: string): Color {
+    return {
+      r: parseInt(hex.slice(0, 2), 16) / 255,
+      g: parseInt(hex.slice(2, 4), 16) / 255,
+      b: parseInt(hex.slice(4, 6), 16) / 255,
+      a: 1
+    };
+  }
 }

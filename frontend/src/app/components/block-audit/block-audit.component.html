@@ -88,20 +88,21 @@
   </div>
 
   <!-- VISUALIZATIONS -->
-  <div class="box">
+  <div class="box" *ngFor="let demo of demos">
+    <h3>{{ demo }}</h3>
     <div class="row">
       <!-- MISSING TX RENDERING -->
       <div class="col-sm" *ngIf="webGlEnabled">
         <app-block-overview-graph #blockGraphTemplate [isLoading]="isLoading" [resolution]="75"
           [blockLimit]="stateService.blockVSize" [orientation]="'top'" [flip]="false"
-          (txClickEvent)="onTxClick($event)"></app-block-overview-graph>
+          (txClickEvent)="onTxClick($event)" [demo]="demo"></app-block-overview-graph>
       </div>
 
       <!-- ADDED TX RENDERING -->
       <div class="col-sm" *ngIf="webGlEnabled && !isMobile">
         <app-block-overview-graph #blockGraphMined [isLoading]="isLoading" [resolution]="75"
           [blockLimit]="stateService.blockVSize" [orientation]="'top'" [flip]="false"
-          (txClickEvent)="onTxClick($event)"></app-block-overview-graph>
+          (txClickEvent)="onTxClick($event)" [demo]="demo"></app-block-overview-graph>
       </div>
     </div> <!-- row -->
   </div> <!-- box -->

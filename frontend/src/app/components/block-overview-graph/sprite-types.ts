@@ -11,7 +11,7 @@ export type Color = {
   r: number,
   g: number,
   b: number,
-  a: number,
+  a?: number,
 };
 
 export type InterpolatedAttribute = {
@@ -31,7 +31,6 @@ export type Attributes = {
   r: InterpolatedAttribute,
   g: InterpolatedAttribute,
   b: InterpolatedAttribute,
-  a: InterpolatedAttribute
 };
 
 export type OptionalAttributes = {
@@ -41,7 +40,6 @@ export type OptionalAttributes = {
   r?: InterpolatedAttribute,
   g?: InterpolatedAttribute,
   b?: InterpolatedAttribute,
-  a?: InterpolatedAttribute
 };
 
 export type SpriteUpdateParams = {
@@ -51,7 +49,8 @@ export type SpriteUpdateParams = {
   r?: number,
   g?: number,
   b?: number,
-  a?: number
+  altColor?: Color,
+  effect?: string,
   start?: DOMHighResTimeStamp,
   duration?: number,
   minDuration?: number,
@@ -70,5 +69,5 @@ export type ViewUpdateParams = {
   delay?: number,
   jitter?: number,
   state?: string,
-  adjust?: boolean
+  adjust?: boolean,
 };

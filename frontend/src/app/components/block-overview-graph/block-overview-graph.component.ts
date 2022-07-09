@@ -17,6 +17,7 @@ export class BlockOverviewGraphComponent implements AfterViewInit, OnDestroy {
   @Input() blockLimit: number;
   @Input() orientation = 'left';
   @Input() flip = true;
+  @Input() demo: string;
   @Output() txClickEvent = new EventEmitter<TransactionStripped>();
 
   @ViewChild('blockCanvas')
@@ -172,7 +173,7 @@ export class BlockOverviewGraphComponent implements AfterViewInit, OnDestroy {
       this.start();
     } else {
       this.scene = new BlockScene({ width: this.displayWidth, height: this.displayHeight, resolution: this.resolution,
-        blockLimit: this.blockLimit, orientation: this.orientation, flip: this.flip, vertexArray: this.vertexArray });
+        blockLimit: this.blockLimit, orientation: this.orientation, flip: this.flip, vertexArray: this.vertexArray, demoMode: this.demo });
       this.start();
     }
   }
@@ -261,7 +262,7 @@ export class BlockOverviewGraphComponent implements AfterViewInit, OnDestroy {
     }
 
     /* LOOP */
-    if (this.running && this.scene && now <= (this.scene.animateUntil + 500)) {
+    if (this.running && this.scene && true) { //now <= (this.scene.animateUntil + 500)) {
       this.doRun();
     } else {
       if (this.animationHeartBeat) {
@@ -365,13 +366,13 @@ export class BlockOverviewGraphComponent implements AfterViewInit, OnDestroy {
 // WebGL shader attributes
 const attribs = {
   offset: { type: 'FLOAT', count: 2, pointer: null, offset: 0 },
+  effect: { type: 'FLOAT', count: 4, pointer: null, offset: 0 },
   posX: { type: 'FLOAT', count: 4, pointer: null, offset: 0 },
   posY: { type: 'FLOAT', count: 4, pointer: null, offset: 0 },
   posR: { type: 'FLOAT', count: 4, pointer: null, offset: 0 },
   colR: { type: 'FLOAT', count: 4, pointer: null, offset: 0 },
   colG: { type: 'FLOAT', count: 4, pointer: null, offset: 0 },
   colB: { type: 'FLOAT', count: 4, pointer: null, offset: 0 },
-  colA: { type: 'FLOAT', count: 4, pointer: null, offset: 0 }
 };
 // Calculate the number of bytes per vertex based on specified attributes
 const stride = Object.values(attribs).reduce((total, attrib) => {
@@ -386,20 +387,24 @@ for (let i = 0, offset = 0; i < Object.keys(attribs).length; i++) {
 
 const vertShaderSrc = `
 varying lowp vec4 vColor;
+varying float size;
+varying vec4 effectColor;
+varying vec2 localCoord;
+varying float effectType;
 
 // each attribute contains [x: startValue, y: endValue, z: startTime, w: rate]
 // shader interpolates between start and end values at the given rate, from the given time
 
 attribute vec2 offset;
+attribute vec4 effect;
 attribute vec4 posX;
 attribute vec4 posY;
 attribute vec4 posR;
 attribute vec4 colR;
 attribute vec4 colG;
 attribute vec4 colB;
-attribute vec4 colA;
 
-uniform vec2 screenSize;
+uniform highp vec2 screenSize;
 uniform float now;
 
 float smootherstep(float x) {
@@ -415,6 +420,10 @@ float interpolateAttribute(vec4 attr) {
   return mix(attr.x, attr.y, delta);
 }
 
+vec4 pulse(vec4 colorA, vec4 colorB) {
+  return mix(colorA, colorB, smoothstep(0.0, 1.0, 0.5 * (1.0 + sin(now / 200.0))));
+}
+
 void main() {
   vec4 screenTransform = vec4(2.0 / screenSize.x, 2.0 / screenSize.y, -1.0, -1.0);
   // vec4 screenTransform = vec4(1.0 / screenSize.x, 1.0 / screenSize.y, -0.5, -0.5);
@@ -427,17 +436,54 @@ void main() {
   float red = interpolateAttribute(colR);
   float green = interpolateAttribute(colG);
   float blue = interpolateAttribute(colB);
-  float alpha = interpolateAttribute(colA);
 
-  vColor = vec4(red, green, blue, alpha);
+  size = radius * 2.0;
+  localCoord = offset;
+  vColor = vec4(red, green, blue, 1.0);
+  effectColor = vec4(effect.rgb, 1.0);
+  effectType = effect.a;
+  if (effectType > 0.5 && effectType < 1.5) {
+    vColor = pulse(vColor, effectColor);
+  }
 }
 `;
 
 const fragShaderSrc = `
-varying lowp vec4 vColor;
+uniform highp vec2 screenSize;
+
+precision lowp float;
+
+varying float size;
+varying vec2 localCoord;
+varying vec4 effectColor;
+varying vec4 vColor;
+varying float effectType;
+
+vec4 applyEffect() {
+  vec2 uv = gl_FragCoord.xy / screenSize;
+  if (effectType < 1.5) { // no effect
+    return vColor;
+  } else if (effectType < 2.5) { // border
+    float lower = 1.0 - (8.0 / size);
+    float upper = 1.0 - (16.0 / size);
+    float x = smoothstep(lower, upper, abs(localCoord.x - 0.5) * 2.0);
+    float y = smoothstep(lower, upper, abs(localCoord.y - 0.5) * 2.0);
+    return mix(effectColor, vColor, x * y);
+  } else { // checkerboard
+    float checker = 13.0 / size;
+    bool x = mod(floor(localCoord.x / checker), 2.0) == 0.0;
+    bool y = mod(floor(localCoord.y / checker), 2.0) == 0.0;
+    if ((x || y) && !(x && y)) {
+      return vColor;
+    } else {
+      return effectColor;
+    }
+  }
+}
 
 void main() {
-  gl_FragColor = vColor;
+  gl_FragColor = applyEffect();
+
   // premultiply alpha
   gl_FragColor.rgb *= gl_FragColor.a;
 }

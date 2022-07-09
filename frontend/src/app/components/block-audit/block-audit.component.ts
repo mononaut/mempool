@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, ViewChildren,QueryList } from '@angular/core';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map, share, switchMap, tap } from 'rxjs/operators';
@@ -36,8 +36,13 @@ export class BlockAuditComponent implements OnInit, OnDestroy {
   webGlEnabled = true;
   isMobile = window.innerWidth <= 767.98;
 
-  @ViewChild('blockGraphTemplate') blockGraphTemplate: BlockOverviewGraphComponent;
-  @ViewChild('blockGraphMined') blockGraphMined: BlockOverviewGraphComponent;
+  demos = ['colors', 'focus', 'desaturate', 'lighten', 'pulse', 'border', 'checkerboard']
+
+  // @ViewChild('blockGraphTemplate') blockGraphTemplate: BlockOverviewGraphComponent;
+  // @ViewChild('blockGraphMined') blockGraphMined: BlockOverviewGraphComponent;
+
+  @ViewChildren('blockGraphTemplate') blockGraphsTemplate: QueryList<BlockOverviewGraphComponent>;
+  @ViewChildren('blockGraphMined') blockGraphsMined: QueryList<BlockOverviewGraphComponent>;
 
   constructor(
     private route: ActivatedRoute,
@@ -84,14 +89,22 @@ export class BlockAuditComponent implements OnInit, OnDestroy {
             }),
             tap((blockAudit) => {
               this.changeMode(this.mode);
-              if (this.blockGraphTemplate) {
-                this.blockGraphTemplate.destroy();
-                this.blockGraphTemplate.setup(blockAudit.template);
-              }
-              if (this.blockGraphMined) {
-                this.blockGraphMined.destroy();
-                this.blockGraphMined.setup(blockAudit.transactions);
-              }
+              // if (this.blockGraphTemplate) {
+              //   this.blockGraphTemplate.destroy();
+              //   this.blockGraphTemplate.setup(blockAudit.template);
+              // }
+              // if (this.blockGraphMined) {
+              //   this.blockGraphMined.destroy();
+              //   this.blockGraphMined.setup(blockAudit.transactions);
+              // }
+              this.blockGraphsTemplate.forEach(graph => {
+                graph.destroy();
+                graph.setup(blockAudit.template);
+              })
+              this.blockGraphsMined.forEach(graph => {
+                graph.destroy();
+                graph.setup(blockAudit.transactions);
+              })
               this.isLoading = false;
             }),
           );

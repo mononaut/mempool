@@ -1,8 +1,8 @@
 import { FastVertexArray } from './fast-vertex-array';
-import { InterpolatedAttribute, Attributes, OptionalAttributes, SpriteUpdateParams, Update } from './sprite-types';
+import { Color, InterpolatedAttribute, Attributes, OptionalAttributes, SpriteUpdateParams, Update } from './sprite-types';
 
 const attribKeys = ['a', 'b', 't', 'v'];
-const updateKeys = ['x', 'y', 's', 'r', 'g', 'b', 'a'];
+const updateKeys = ['x', 'y', 's', 'r', 'g', 'b'];
 
 export default class TxSprite {
   static vertexSize = 30;
@@ -15,14 +15,16 @@ export default class TxSprite {
   updateMap: Update;
   attributes: Attributes;
   tempAttributes: OptionalAttributes;
+  effect: string;
+  altColor: Color = { r: 0, g: 0, b: 0 };
 
 
   constructor(params: SpriteUpdateParams, vertexArray: FastVertexArray) {
     const offsetTime = params.start;
     this.vertexArray = vertexArray;
-    this.vertexData = Array(VI.length).fill(0);
+    this.vertexData = Array(TxSprite.dataSize).fill(0);
     this.updateMap = {
-      x: 0, y: 0, s: 0, r: 0, g: 0, b: 0, a: 0
+      x: 0, y: 0, s: 0, r: 0, g: 0, b: 0
     };
 
     this.attributes = {
@@ -32,13 +34,15 @@ export default class TxSprite {
       r: { a: params.r, b: params.r, t: offsetTime, v: 0, d: 0 },
       g: { a: params.g, b: params.g, t: offsetTime, v: 0, d: 0 },
       b: { a: params.b, b: params.b, t: offsetTime, v: 0, d: 0 },
-      a: { a: params.a, b: params.a, t: offsetTime, v: 0, d: 0 },
     };
 
     // Used to temporarily modify the sprite, so that the base view can be resumed later
     this.tempAttributes = null;
 
     this.vertexPointer = this.vertexArray.insert(this);
+
+    if (params.altColor) this.altColor = params.altColor;
+    this.effect = params.effect;
 
     this.compile();
   }
@@ -100,6 +104,9 @@ export default class TxSprite {
       this.interpolateAttributes(this.updateMap, this.tempAttributes, offsetTime, v, params.duration, params.minDuration, params.adjust);
     }
 
+    if (params.altColor) this.altColor = params.altColor;
+    this.effect = params.effect;
+
     this.compile();
   }
 
@@ -143,18 +150,32 @@ export default class TxSprite {
 
     // update vertex data in place
     // ugly, but avoids overhead of allocating large temporary arrays
-    const vertexStride = VI.length + 2;
+    const vertexStride = VI.length + 6;
+    const effect = this.compileRenderEffect();
     for (let vertex = 0; vertex < 6; vertex++) {
       this.vertexData[vertex * vertexStride] = vertexOffsetFactors[vertex][0];
       this.vertexData[(vertex * vertexStride) + 1] = vertexOffsetFactors[vertex][1];
+      this.vertexData[(vertex * vertexStride) + 2] = this.altColor.r;
+      this.vertexData[(vertex * vertexStride) + 3] = this.altColor.g;
+      this.vertexData[(vertex * vertexStride) + 4] = this.altColor.b;
+      this.vertexData[(vertex * vertexStride) + 5] = effect;
+
       for (let step = 0; step < VI.length; step++) {
         // components of each field in the vertex array are defined by an entry in VI:
         // VI[i].a is the attribute, VI[i].f is the inner field, VI[i].offA and VI[i].offB are offset factors
-        this.vertexData[(vertex * vertexStride) + step + 2] = attributes[VI[step].a][VI[step].f];
+        this.vertexData[(vertex * vertexStride) + step + 6] = attributes[VI[step].a][VI[step].f];
       }
     }
 
     this.vertexArray.setData(this.vertexPointer, this.vertexData);
+  }
+
+  compileRenderEffect(): number {
+    return {
+      pulse: 1,
+      border: 2,
+      checkerboard: 3,
+    }[this.effect] || 0;
   }
 
   moveVertexPointer(index: number): void {

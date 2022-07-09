@@ -1,7 +1,8 @@
 import { FastVertexArray } from './fast-vertex-array';
 import TxView from './tx-view';
 import { TransactionStripped } from 'src/app/interfaces/websocket.interface';
-import { Position, Square, ViewUpdateParams } from './sprite-types';
+import { Position, Square, ViewUpdateParams, Color } from './sprite-types';
+import { hsl } from 'd3-color';
 
 export default class BlockScene {
   scene: { count: number, offset: { x: number, y: number}};
@@ -21,11 +22,13 @@ export default class BlockScene {
   layout: BlockLayout;
   animateUntil = 0;
   dirty: boolean;
+  demoMode: string;
 
-  constructor({ width, height, resolution, blockLimit, orientation, flip, vertexArray }:
+  constructor({ width, height, resolution, blockLimit, orientation, flip, vertexArray, demoMode }:
       { width: number, height: number, resolution: number, blockLimit: number,
-        orientation: string, flip: boolean, vertexArray: FastVertexArray }
+        orientation: string, flip: boolean, vertexArray: FastVertexArray, demoMode: string }
   ) {
+    this.demoMode = demoMode;
     this.init({ width, height, resolution, blockLimit, orientation, flip, vertexArray });
   }
 
@@ -58,14 +61,14 @@ export default class BlockScene {
     });
     this.layout = new BlockLayout({ width: this.gridWidth, height: this.gridHeight });
     txs.forEach(tx => {
-      const txView = new TxView(tx, this.vertexArray);
+      const txView = new TxView(tx, this.vertexArray, this.demoMode);
       this.txs[tx.txid] = txView;
       this.place(txView);
       this.saveGridToScreenPosition(txView);
       this.applyTxUpdate(txView, {
         display: {
           position: txView.screenPosition,
-          color: txView.getColor()
+          color: this.getColor(txView)
         },
         duration: 0
       });
@@ -105,7 +108,7 @@ export default class BlockScene {
     });
     txs.forEach(tx => {
       if (!this.txs[tx.txid]) {
-        this.txs[tx.txid] = new TxView(tx, this.vertexArray);
+        this.txs[tx.txid] = new TxView(tx, this.vertexArray, this.demoMode);
       }
     });
 
@@ -147,7 +150,7 @@ export default class BlockScene {
     if (resetLayout) {
       add.forEach(tx => {
         if (!this.txs[tx.txid]) {
-          this.txs[tx.txid] = new TxView(tx, this.vertexArray);
+          this.txs[tx.txid] = new TxView(tx, this.vertexArray, this.demoMode);
         }
       });
       this.layout = new BlockLayout({ width: this.gridWidth, height: this.gridHeight });
@@ -157,7 +160,7 @@ export default class BlockScene {
     } else {
       // try to insert new txs directly
       const remaining = [];
-      add.map(tx => new TxView(tx, this.vertexArray)).sort(feeRateDescending).forEach(tx => {
+      add.map(tx => new TxView(tx, this.vertexArray, this.demoMode)).sort(feeRateDescending).forEach(tx => {
         if (!this.tryInsertByFee(tx)) {
           remaining.push(tx);
         }
@@ -225,7 +228,7 @@ export default class BlockScene {
 
   private setTxOnScreen(tx: TxView, startTime: number, delay: number = 50, direction: string = 'left'): void {
     if (!tx.initialised) {
-      const txColor = tx.getColor();
+      const txColor = this.getColor(tx);
       this.applyTxUpdate(tx, {
         display: {
           position: {
@@ -433,6 +436,58 @@ export default class BlockScene {
     return ids.map(id => {
       return this.remove(id, startTime, direction);
     }).filter(tx => tx != null) as TxView[];
+  }
+
+  private getColor(tx: TxView): Color {
+    let color = TxView.getFeeRateColor(tx.feerate);
+    switch(this.demoMode) {
+      case 'colors':
+        if (tx.status === 'added') {
+          return TxView.hexToColor('D81B60')
+        } else if (tx.status === 'missing') {
+          return TxView.hexToColor('039BE5')
+        } else {
+          return tx.getColor();
+        }
+        break;
+
+      case 'focus':
+        if (tx.status === 'added') {
+          return TxView.hexToColor('D81B60')
+        } else if (tx.status === 'missing') {
+          return TxView.hexToColor('039BE5')
+        } else {
+          return TxView.hexToColor('3E4155');
+        }
+        break;
+
+      case 'desaturate':
+        if (tx.status === 'added' || tx.status === 'missing') {
+          const hslColor = hsl('#' + color);
+          hslColor.s += 0.5;
+          return TxView.hexToColor(hslColor.formatHex().slice(1));
+        } else {
+          const hslColor = hsl('#' + color);
+          hslColor.s *= 0.4;
+          hslColor.l -= 0.02;
+          return TxView.hexToColor(hslColor.formatHex().slice(1));
+        }
+        break;
+
+      case 'lighten':
+        if (tx.status === 'added' || tx.status === 'missing') {
+          const hslColor = hsl('#' + color);
+          hslColor.s -= 0.1;
+          hslColor.l += 0.4;
+          return TxView.hexToColor(hslColor.formatHex().slice(1));
+        } else {
+          return TxView.hexToColor(color);
+        }
+        break;
+
+      default:
+        return tx.getColor();
+    }
   }
 }
 
