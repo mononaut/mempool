@@ -477,8 +477,8 @@ export default class BlockScene {
       case 'lighten':
         if (tx.status === 'added' || tx.status === 'missing') {
           const hslColor = hsl('#' + color);
-          hslColor.s -= 0.1;
-          hslColor.l += 0.4;
+          // hslColor.s -= 0.1;
+          hslColor.l = 1 - ((1 - hslColor.l) * 0.5);
           return TxView.hexToColor(hslColor.formatHex().slice(1));
         } else {
           return TxView.hexToColor(color);

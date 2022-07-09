@@ -155,7 +155,15 @@ export default class TxView implements TransactionStripped {
   }
 
   getAltColor(): Color {
-    return TxView.hexToColor('FFFFFF');
+    if (this.demoMode === 'color pulse') {
+      if (this.status === 'added') {
+        return TxView.hexToColor('D81B60')
+      } else if (this.status === 'missing') {
+        return TxView.hexToColor('039BE5')
+      }
+    } else {
+      return TxView.hexToColor('FFFFFF');
+    }
   }
 
   getEffect(): string {

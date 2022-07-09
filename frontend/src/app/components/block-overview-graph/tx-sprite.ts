@@ -173,6 +173,7 @@ export default class TxSprite {
   compileRenderEffect(): number {
     return {
       pulse: 1,
+      "color pulse": 1,
       border: 2,
       checkerboard: 3,
     }[this.effect] || 0;
