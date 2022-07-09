@@ -36,7 +36,7 @@ export class BlockAuditComponent implements OnInit, OnDestroy {
   webGlEnabled = true;
   isMobile = window.innerWidth <= 767.98;
 
-  demos = ['colors', 'focus', 'desaturate', 'lighten', 'pulse', 'color pulse', 'border', 'checkerboard']
+  demos = ['colors', 'dark', 'desaturate', 'lighten', 'pulse', 'color pulse', 'border', 'checkerboard']
 
   // @ViewChild('blockGraphTemplate') blockGraphTemplate: BlockOverviewGraphComponent;
   // @ViewChild('blockGraphMined') blockGraphMined: BlockOverviewGraphComponent;

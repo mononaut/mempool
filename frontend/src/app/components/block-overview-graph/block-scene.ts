@@ -451,7 +451,7 @@ export default class BlockScene {
         }
         break;
 
-      case 'focus':
+      case 'dark':
         if (tx.status === 'added') {
           return TxView.hexToColor('D81B60')
         } else if (tx.status === 'missing') {
