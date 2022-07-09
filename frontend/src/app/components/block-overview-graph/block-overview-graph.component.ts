@@ -234,6 +234,7 @@ export class BlockOverviewGraphComponent implements AfterViewInit, OnDestroy {
       this.gl.uniform2f(this.gl.getUniformLocation(this.shaderProgram, 'screenSize'), this.displayWidth, this.displayHeight);
       // frame timestamp
       this.gl.uniform1f(this.gl.getUniformLocation(this.shaderProgram, 'now'), now);
+      this.gl.uniform1f(this.gl.getUniformLocation(this.shaderProgram, 'pixelRatio'), window.devicePixelRatio);
 
       if (this.vertexArray.dirty) {
         /* SET UP SHADER ATTRIBUTES */
@@ -405,6 +406,7 @@ attribute vec4 colG;
 attribute vec4 colB;
 
 uniform highp vec2 screenSize;
+uniform lowp float pixelRatio;
 uniform float now;
 
 float smootherstep(float x) {
@@ -450,6 +452,7 @@ void main() {
 
 const fragShaderSrc = `
 uniform highp vec2 screenSize;
+uniform lowp float pixelRatio;
 
 precision lowp float;
 
@@ -479,12 +482,20 @@ vec4 applyEffect() {
       return effectColor;
     }
   } else { // stripes
-    float thickness = 10.0 / size;
-    float stripe = mod(floor((localCoord.x + localCoord.y) / thickness), 2.0);
-    if (stripe == 0.0) {
-      return effectColor;
+    float thickness = (8.0 * pixelRatio) / size;
+    if (thickness > 0.3) {
+      if ((localCoord.x + localCoord.y) <= 1.0) {
+        return effectColor;
+      } else {
+        return vColor;
+      }
     } else {
-      return vColor;
+      float stripe = mod(floor((localCoord.x + localCoord.y) / thickness), 4.0);
+      if (stripe == 0.0) {
+        return effectColor;
+      } else {
+        return vColor;
+      }
     }
   }
 }
