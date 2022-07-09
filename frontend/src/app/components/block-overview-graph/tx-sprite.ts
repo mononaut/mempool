@@ -176,6 +176,7 @@ export default class TxSprite {
       "color pulse": 1,
       border: 2,
       checkerboard: 3,
+      stripes: 4,
     }[this.effect] || 0;
   }
 

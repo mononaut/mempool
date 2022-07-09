@@ -464,11 +464,11 @@ export default class BlockScene {
       case 'desaturate':
         if (tx.status === 'added' || tx.status === 'missing') {
           const hslColor = hsl('#' + color);
-          hslColor.s += 0.5;
+          hslColor.s += 0.6;
           return TxView.hexToColor(hslColor.formatHex().slice(1));
         } else {
           const hslColor = hsl('#' + color);
-          hslColor.s *= 0.4;
+          hslColor.s -= 0.6;
           hslColor.l -= 0.02;
           return TxView.hexToColor(hslColor.formatHex().slice(1));
         }
@@ -477,8 +477,8 @@ export default class BlockScene {
       case 'lighten':
         if (tx.status === 'added' || tx.status === 'missing') {
           const hslColor = hsl('#' + color);
-          // hslColor.s -= 0.1;
-          hslColor.l = 1 - ((1 - hslColor.l) * 0.5);
+          hslColor.s += 0.2;
+          hslColor.l += 0.3; //1 - ((1 - hslColor.l) * 0.5);
           return TxView.hexToColor(hslColor.formatHex().slice(1));
         } else {
           return TxView.hexToColor(color);

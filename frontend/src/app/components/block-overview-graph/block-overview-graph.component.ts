@@ -469,7 +469,7 @@ vec4 applyEffect() {
     float x = smoothstep(lower, upper, abs(localCoord.x - 0.5) * 2.0);
     float y = smoothstep(lower, upper, abs(localCoord.y - 0.5) * 2.0);
     return mix(effectColor, vColor, x * y);
-  } else { // checkerboard
+  } else if (effectType < 3.5) { // checkerboard
     float checker = 13.0 / size;
     bool x = mod(floor(localCoord.x / checker), 2.0) == 0.0;
     bool y = mod(floor(localCoord.y / checker), 2.0) == 0.0;
@@ -477,6 +477,14 @@ vec4 applyEffect() {
       return vColor;
     } else {
       return effectColor;
+    }
+  } else { // stripes
+    float thickness = 10.0 / size;
+    float stripe = mod(floor((localCoord.x + localCoord.y) / thickness), 2.0);
+    if (stripe == 0.0) {
+      return effectColor;
+    } else {
+      return vColor;
     }
   }
 }
