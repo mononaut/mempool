@@ -468,8 +468,8 @@ export default class BlockScene {
           return TxView.hexToColor(hslColor.formatHex().slice(1));
         } else {
           const hslColor = hsl('#' + color);
-          hslColor.s -= 0.6;
-          hslColor.l -= 0.02;
+          hslColor.s = 0.3;
+          hslColor.l -= 0.03;
           return TxView.hexToColor(hslColor.formatHex().slice(1));
         }
         break;
