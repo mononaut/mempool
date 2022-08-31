@@ -164,7 +164,10 @@ export class TransactionPreviewComponent implements OnInit, OnDestroy {
           this.opReturns = this.getOpReturns(this.tx);
           this.extraData = this.chooseExtraData();
 
-          if (!tx.status.confirmed && tx.firstSeen) {
+          if (tx.status.confirmed) {
+            this.transactionTime = tx.status.block_time;
+            this.openGraphService.waitOver('tx-time-' + this.txId);
+          } else if (!tx.status.confirmed && tx.firstSeen) {
             this.transactionTime = tx.firstSeen;
           } else {
             this.getTransactionTime();
@@ -193,7 +196,7 @@ export class TransactionPreviewComponent implements OnInit, OnDestroy {
   }
 
   getTransactionTime() {
-    this.openGraphService.waitFor('tx-time');
+    this.openGraphService.waitFor('tx-time-' + this.txId);
     this.apiService
       .getTransactionTimes$([this.tx.txid])
       .pipe(
@@ -203,7 +206,7 @@ export class TransactionPreviewComponent implements OnInit, OnDestroy {
       )
       .subscribe((transactionTimes) => {
         this.transactionTime = transactionTimes[0];
-        this.openGraphService.waitOver('tx-time');
+        this.openGraphService.waitOver('tx-time-' + this.txId);
       });
   }
 
