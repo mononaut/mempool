@@ -253,7 +253,6 @@ class WebsocketHandler {
     logger.debug("mempool changed!");
 
     mempoolBlocks.updateMempoolBlocks(newMempool);
-    mempoolBlocks.makeBlockTemplates(cloneMempool(newMempool), 2, false);
     const mBlocks = mempoolBlocks.getMempoolBlocks();
     const mBlockDeltas = mempoolBlocks.getMempoolBlockDeltas();
     const mempoolInfo = memPool.getMempoolInfo();

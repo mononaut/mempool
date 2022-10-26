@@ -147,58 +147,73 @@ class MempoolBlocks {
   * (see BlockAssembler in https://github.com/bitcoin/bitcoin/blob/master/src/node/miner.cpp)
   *
   * blockLimit: number of blocks to build in total.
+  * weightLimit: maximum weight of transactions to consider using the selection algorithm.
+  *              if weightLimit is significantly lower than the mempool size, results may start to diverge from getBlockTemplate 
   * condenseRest: whether to ignore excess transactions or append them to the final block.
   */
-  public makeBlockTemplates(mempool: { [txid: string]: AuditTransaction }, blockLimit: number = Infinity, condenseRest = false): MempoolBlockWithTransactions[] {
+  public makeBlockTemplates(mempool: { [txid: string]: TransactionExtended }, blockLimit: number, weightLimit: number | null = null, condenseRest = false): MempoolBlockWithTransactions[] {
     const start = Date.now();
-    const mempoolArray: AuditTransaction[] = Object.values(mempool);
-
-    console.log('converted to array: ', (Date.now() - start) / 1000);
-
-    mempoolArray.forEach((tx) => {
-      tx.bestDescendant = null;
-      tx.cpfpChecked = false;
-    });
-
-    console.log('reset mempool', (Date.now() - start) / 1000);
-
-    mempoolArray.sort((a, b) => b.feePerVsize - a.feePerVsize);
-
-    console.log('first sort', (Date.now() - start) / 1000);
+    const auditPool: { [txid: string]: AuditTransaction } = {};
+    const mempoolArray: AuditTransaction[] = [];
+    const restOfArray: TransactionExtended[] = [];
+    
+    let weight = 0;
+    const maxWeight = weightLimit ? Math.max(4_000_000 * blockLimit, weightLimit) : Infinity;
+    // grab the top feerate txs up to maxWeight
+    Object.values(mempool).sort((a, b) => b.feePerVsize - a.feePerVsize).forEach(tx => {
+      weight += tx.weight;
+      if (weight >= maxWeight) {
+        restOfArray.push(tx);
+        return;
+      }
+      // initializing everything up front helps V8 optimize property access later
+      auditPool[tx.txid] = {
+        txid: tx.txid,
+        fee: tx.fee,
+        size: tx.size,
+        weight: tx.weight,
+        feePerVsize: tx.feePerVsize,
+        vin: tx.vin,
+        relativesSet: false,
+        ancestorMap: new Map<string, AuditTransaction>(),
+        children: new Set<AuditTransaction>(),
+        ancestorFee: 0,
+        ancestorWeight: 0,
+        score: 0,
+        used: false,
+        modified: false,
+        modifiedNode: null,
+      }
+      mempoolArray.push(auditPool[tx.txid]);
+    })
 
     // Build relatives graph & calculate ancestor scores
-    const packageLimit = mempoolArray.length; //Math.min(2400 * 8, mempoolArray.length);
-    for (let i = 0; i < packageLimit; i++) {
-      if (!mempoolArray[i].ancestorSet) {
-        this.setRelatives(mempoolArray[i], mempool);
+    for (const tx of mempoolArray) {
+      if (!tx.relativesSet) {
+        this.setRelatives(tx, auditPool);
       }
     }
 
-    console.log('set relatives', (Date.now() - start) / 1000);
-
     // Sort by descending ancestor score
     mempoolArray.sort((a, b) => (b.score || 0) - (a.score || 0));
-
-    console.log('second sort', (Date.now() - start) / 1000);
 
     // Build blocks by greedily choosing the highest feerate package
     // (i.e. the package rooted in the transaction with the best ancestor score)
     const blocks: MempoolBlockWithTransactions[] = [];
     let blockWeight = 4000;
     let blockSize = 0;
-    let transactions: TransactionExtended[] = [];
+    let transactions: AuditTransaction[] = [];
     const modified: PairingHeap<AuditTransaction> = new PairingHeap((a, b): boolean => (a.score || 0) > (b.score || 0));
     let overflow: AuditTransaction[] = [];
     let failures = 0;
     let top = 0;
     while ((top < mempoolArray.length || !modified.isEmpty()) && (condenseRest || blocks.length < blockLimit)) {
-      // this.mainLoop++;
-      // Select best next package
-
+      // skip invalid transactions
       while (top < mempoolArray.length && (mempoolArray[top].used || mempoolArray[top].modified)) {
         top++;
       }
 
+      // Select best next package
       let nextTx;
       const nextPoolTx = mempoolArray[top];
       const nextModifiedTx = modified.peek();
@@ -207,51 +222,49 @@ class MempoolBlocks {
         top++;
       } else {
         modified.pop();
-        // this.modified--;
         if (nextModifiedTx) {
           nextTx = nextModifiedTx;
-          delete nextTx.modifiedNode;
+          nextTx.modifiedNode = undefined;
         }
       }
 
-      if (!nextTx?.used) {
+      if (nextTx && !nextTx?.used) {
         // Check if the package fits into this block
         if (blockWeight + nextTx.ancestorWeight < config.MEMPOOL.BLOCK_WEIGHT_UNITS) {
           blockWeight += nextTx.ancestorWeight;
-          const ancestors: AuditTransaction[] = Array.from(nextTx.ancestorSet.values());
-          // sort txSet by dependency graph (equivalent to sorting by ascending ancestor count)
-          const sortedTxSet = [...ancestors.sort((a: AuditTransaction, b: AuditTransaction) => {
-            return (a.ancestorSet?.size || 0) - (b.ancestorSet?.size || 0);
-          }), nextTx];
+          const ancestors: AuditTransaction[] = Array.from(nextTx.ancestorMap.values());
+          // sort ancestors by dependency graph (equivalent to sorting by ascending ancestor count)
+          const sortedTxSet = [...ancestors.sort((a, b) => { return (a.ancestorMap.size || 0) - (b.ancestorMap.size || 0); }), nextTx];
+          const effectiveFeeRate = nextTx.ancestorFee / (nextTx.ancestorWeight / 4);
           sortedTxSet.forEach((ancestor, i, arr) => {
-            const tx = mempool[ancestor.txid];
-            if (!tx?.used) {
-              tx.used = true;
-              tx.effectiveFeePerVsize = nextTx.ancestorFee / (nextTx.ancestorWeight / 4);
-              tx.cpfpChecked = true;
-              // tx.ancestors = Array.from(tx.ancestorSet?.values()).map(a => {
-              //   return {
-              //     txid: a.txid,
-              //     fee: a.fee,
-              //     weight: a.weight,
-              //   }
-              // })
+            const mempoolTx = mempool[ancestor.txid];
+            if (ancestor && !ancestor?.used) {
+              ancestor.used = true;
+              // update original copy of this tx with effective fee rate & relatives data
+              mempoolTx.effectiveFeePerVsize = effectiveFeeRate;
+              mempoolTx.ancestors = (Array.from(ancestor.ancestorMap?.values()) as AuditTransaction[]).map((a) => {
+                return {
+                  txid: a.txid,
+                  fee: a.fee,
+                  weight: a.weight,
+                }
+              })
               if (i < arr.length - 1) {
-                tx.bestDescendant = {
-                  txid: arr[i + 1].txid,
-                  fee: arr[i + 1].fee,
-                  weight: arr[i + 1].weight,
+                mempoolTx.bestDescendant = {
+                  txid: arr[arr.length - 1].txid,
+                  fee: arr[arr.length - 1].fee,
+                  weight: arr[arr.length - 1].weight,
                 };
               }
-              transactions.push(tx);
-              blockSize += tx.size;
+              transactions.push(ancestor);
+              blockSize += ancestor.size;
             }
           });
 
-          // remove these as valid package ancestors for any remaining descendants
+          // remove these as valid package ancestors for any descendants remaining in the mempool
           if (sortedTxSet.length) {
             sortedTxSet.forEach(tx => {
-              this.updateDescendants(tx.txid, mempool, modified);
+              this.updateDescendants(tx, auditPool, modified);
             });
           }
 
@@ -259,7 +272,6 @@ class MempoolBlocks {
         } else {
           // hold this package in an overflow list while we check for smaller options
           overflow.push(nextTx);
-          // this.overflowed++;
           failures++;
         }
       }
@@ -269,7 +281,7 @@ class MempoolBlocks {
       if (exceededPackageTries && (!condenseRest || blocks.length < blockLimit - 1)) {
         // construct this block
         if (transactions.length) {
-          blocks.push(this.dataToMempoolBlocks(transactions, blockSize, blockWeight, blocks.length));
+          blocks.push(this.dataToMempoolBlocks(transactions.map(t => mempool[t.txid]), blockSize, blockWeight, blocks.length));
         }
         // reset for the next block
         transactions = [];
@@ -280,8 +292,6 @@ class MempoolBlocks {
         for (const overflowTx of overflow.reverse()) {
           if (overflowTx.modified) {
             overflowTx.modifiedNode = modified.add(overflowTx);
-            // this.modified++;
-            // this.maxModified = Math.max(this.maxModified, this.modified);
           } else {
             top--;
             mempoolArray[top] = overflowTx;
@@ -290,148 +300,117 @@ class MempoolBlocks {
         overflow = [];
       }
     }
-    console.log('build blocks', (Date.now() - start) / 1000);
     if (condenseRest) {
+      // pack any leftover transactions into the last block
       for (const tx of overflow) {
-        if (tx?.used) {
+        if (!tx || tx?.used) {
           continue;
         }
-        if (blockWeight + tx.weight <= config.MEMPOOL.BLOCK_WEIGHT_UNITS
-          || blocks.length >= blockLimit - 1) {
-          blockWeight += tx.weight;
-          blockSize += tx.size;
-          transactions.push(tx);
-          tx.used = true;
-        } else {
-          if (transactions.length) {
-            blocks.push(this.dataToMempoolBlocks(transactions, blockSize, blockWeight, blocks.length));
-          }
-          blockWeight = tx.weight;
-          blockSize = tx.size;
-          transactions = [tx];
-          tx.used = true;
-        }
+        blockWeight += tx.weight;
+        blockSize += tx.size;
+        transactions.push(tx);
+        tx.used = true;
       }
+      const blockTransactions = transactions.map(t => mempool[t.txid])
+      restOfArray.forEach(tx => {
+        blockWeight += tx.weight;
+        blockSize += tx.size;
+        blockTransactions.push(tx);
+      });
+      if (blockTransactions.length) {
+        blocks.push(this.dataToMempoolBlocks(blockTransactions, blockSize, blockWeight, blocks.length));
+      }
+      transactions = [];
+    } else if (transactions.length) {
+      blocks.push(this.dataToMempoolBlocks(transactions.map(t => mempool[t.txid]), blockSize, blockWeight, blocks.length));
     }
-    if (transactions.length) {
-      blocks.push(this.dataToMempoolBlocks(transactions, blockSize, blockWeight, blocks.length));
-    }
-    console.log('condensed rest', (Date.now() - start) / 1000);
 
     const end = Date.now();
     const time = end - start;
     logger.debug('Mempool templates calculated in ' + time / 1000 + ' seconds');
 
-    // console.log('setRelativesCalled', this.setRelativesCalled);
-    // console.log('updateDescendantsCalled', this.updateDescendantsCalled);
-    // console.log('increaseKey', this.increaseKey);
-    // console.log('decreaseKey', this.decreaseKey);
-    // console.log('mainLoop', this.mainLoop);
-    // console.log('modified', this.modified);
-    // console.log('maxModified', this.maxModified);
-    // console.log('overflowed', this.overflowed);
-
     return blocks;
   }
 
+  // traverse in-mempool ancestors
+  // recursion unavoidable, but should be limited to depth < 25 by mempool policy
   public setRelatives(
     tx: AuditTransaction,
     mempool: { [txid: string]: AuditTransaction },
   ): void {
-    // this.setRelativesCalled++;
-    let ancestors: Map<string, AuditTransaction> = new Map();
-    tx.vin.forEach((parent) => {
+    for (const parent of tx.vin) {
       const parentTx = mempool[parent.txid];
-      if (parentTx && !ancestors.has(parent.txid)) {
-        ancestors.set(parent.txid, parentTx);
-        if (!parentTx.children) {
-          parentTx.children = new Set([tx.txid]);
-        } else {
-          parentTx.children.add(tx.txid);
-        }
-        if (!parentTx.ancestorSet) {
+      if (parentTx && !tx.ancestorMap!.has(parent.txid)) {
+        tx.ancestorMap.set(parent.txid, parentTx);
+        parentTx.children.add(tx);
+        // visit each node only once
+        if (!parentTx.relativesSet) {
           this.setRelatives(parentTx, mempool);
         }
-        if (parentTx.ancestorSet) {
-          parentTx.ancestorSet.forEach(ancestor => {
-            ancestors.set(ancestor.txid, ancestor);
-          });
-        }
+        parentTx.ancestorMap.forEach((ancestor) => {
+          tx.ancestorMap.set(ancestor.txid, ancestor);
+        });
       }
+    };
+    tx.ancestorFee = tx.fee || 0;
+    tx.ancestorWeight = tx.weight || 0;
+    tx.ancestorMap.forEach((ancestor) => {
+      tx.ancestorFee += ancestor.fee;
+      tx.ancestorWeight += ancestor.weight;
     });
-    let totalFees = tx.fee;
-    let totalWeight = tx.weight;
-    ancestors.forEach(ancestor => {
-      totalFees += ancestor.fee;
-      totalWeight += ancestor.weight;
-    });
-    tx.ancestorFee = totalFees;
-    tx.ancestorWeight = totalWeight;
-    tx.score = totalFees / totalWeight;
-
-    if (tx?.ancestorSet?.size! >= 25) {
-      console.log('too many ancestors!!');
-    }
-
-    tx.ancestorSet = ancestors;
+    tx.score = tx.ancestorFee / (tx.ancestorWeight || 1);
+    tx.relativesSet = true;
   }
 
   // iterate over remaining descendants, removing the root as a valid ancestor & updating the ancestor score
+  // avoids recursion to limit call stack depth
   private updateDescendants(
-    txid: string,
+    rootTx: AuditTransaction,
     mempool: { [txid: string]: AuditTransaction },
     modified: PairingHeap<AuditTransaction>,
   ): void {
-    // this.updateDescendantsCalled++;
-    const rootTx = mempool[txid];
-    const descendantSet: Set<string> = new Set();
-    const descendants: string[] = [];
-    let childTx;
-    let childId;
+    const descendantSet: Set<AuditTransaction> = new Set();
+    // stack of nodes left to visit
+    const descendants: AuditTransaction[] = [];
+    let descendantTx;
     let ancestorIndex;
     let tmpScore;
-    if (rootTx.children) {
-      rootTx.children.forEach(childId => {
-        if (!descendantSet.has(childId)) {
-          descendants.push(childId);
-          descendantSet.add(childId);
-        }
-      });
-    }
+    rootTx.children.forEach(childTx => {
+      if (!descendantSet.has(childTx)) {
+        descendants.push(childTx);
+        descendantSet.add(childTx);
+      }
+    });
     while (descendants.length) {
-      childId = descendants.pop();
-      childTx = mempool[childId];
-      if (childTx && childTx.ancestorSet && childTx.ancestorSet.has(txid)) {
+      descendantTx = descendants.pop();
+      if (descendantTx && descendantTx.ancestorMap && descendantTx.ancestorMap.has(rootTx.txid)) {
         // remove tx as ancestor
-        childTx.ancestorSet.delete(txid);
-        childTx.ancestorFee -= rootTx.fee;
-        childTx.ancestorWeight -= rootTx.weight;
-        tmpScore = childTx.score;
-        childTx.score = childTx.ancestorFee / childTx.ancestorWeight;
+        descendantTx.ancestorMap.delete(rootTx.txid);
+        descendantTx.ancestorFee -= rootTx.fee;
+        descendantTx.ancestorWeight -= rootTx.weight;
+        tmpScore = descendantTx.score;
+        descendantTx.score = descendantTx.ancestorFee / descendantTx.ancestorWeight;
 
-        if (!childTx.modifiedNode) {
-          childTx.modified = true;
-          childTx.modifiedNode = modified.add(childTx);
-          // this.modified++;
-          // this.maxModified = Math.max(this.maxModified, this.modified);
+        if (!descendantTx.modifiedNode) {
+          descendantTx.modified = true;
+          descendantTx.modifiedNode = modified.add(descendantTx);
         } else {
-          if (childTx.score < tmpScore) {
-            // this.decreaseKey++;
-            modified.decreasePriority(childTx.modifiedNode);
-          } else if (childTx.score > tmpScore) {
-            // this.increaseKey++;
-            modified.increasePriority(childTx.modifiedNode);
+          // rebalance modified heap if score has changed
+          if (descendantTx.score < tmpScore) {
+            modified.decreasePriority(descendantTx.modifiedNode);
+          } else if (descendantTx.score > tmpScore) {
+            modified.increasePriority(descendantTx.modifiedNode);
           }
         }
 
-        if (childTx.children) {
-          childTx.children.forEach(childId => {
-            if (!descendantSet.has(childId)) {
-              descendants.push(childId);
-              descendantSet.add(childId);
-            }
-          });
-        }
+        // add this node's children to the stack
+        descendantTx.children.forEach(childTx => {
+          // visit each node only once
+          if (!descendantSet.has(childTx)) {
+            descendants.push(childTx);
+            descendantSet.add(childTx);
+          }
+        });
       }
     }
   }

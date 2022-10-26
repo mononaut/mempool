@@ -71,23 +71,22 @@ export interface TransactionExtended extends IEsploraApi.Transaction {
   deleteAfter?: number;
 }
 
-export interface AuditTransaction extends TransactionExtended {
-  vsize: number;
+export interface AuditTransaction {
+  txid: string;
+  fee: number;
+  size: number;
+  weight: number;
   feePerVsize: number;
-  firstSeen?: number;
-  effectiveFeePerVsize: number;
-  ancestorSet?: Map<string, AuditTransaction>;
-  bestDescendant?: BestDescendant | null;
-  cpfpChecked?: boolean;
-  deleteAfter?: number;
-
-  ancestorFee?: number;
-  ancestorWeight?: number;
-  score?: number;
-  children?: Set<string>;
-  used?: boolean;
-  modified?: boolean;
-  modifiedNode?: HeapNode<AuditTransaction>;
+  vin: IEsploraApi.Vin[];
+  relativesSet: boolean;
+  ancestorMap: Map<string, AuditTransaction>;
+  children: Set<AuditTransaction>;
+  ancestorFee: number;
+  ancestorWeight: number;
+  score: number;
+  used: boolean;
+  modified: boolean;
+  modifiedNode: HeapNode<AuditTransaction>;
 }
 
 export interface Ancestor {
