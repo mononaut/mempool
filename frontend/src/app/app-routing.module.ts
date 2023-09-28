@@ -5,6 +5,7 @@ import { StartComponent } from './components/start/start.component';
 import { TransactionComponent } from './components/transaction/transaction.component';
 import { BlockComponent } from './components/block/block.component';
 import { BlockViewComponent } from './components/block-view/block-view.component';
+import { EightBlocksComponent } from './components/eight-blocks/eight-blocks.component';
 import { MempoolBlockViewComponent } from './components/mempool-block-view/mempool-block-view.component';
 import { ClockComponent } from './components/clock/clock.component';
 import { AddressComponent } from './components/address/address.component';
@@ -382,6 +383,10 @@ let routes: Routes = [
   {
     path: 'view/mempool-block/:index',
     component: MempoolBlockViewComponent,
+  },
+  {
+    path: 'eight-blocks',
+    component: EightBlocksComponent,
   },
   {
     path: 'status',
